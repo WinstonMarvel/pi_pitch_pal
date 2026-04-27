@@ -1,5 +1,5 @@
 # Stage 1: Dependencies
-FROM alpine:3.20 AS dependencies
+FROM alpine:3.21 AS dependencies
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -7,6 +7,7 @@ RUN apk add --no-cache \
     py3-pip \
     yt-dlp \
     ffmpeg \
+    rubberband \
     curl
 
 RUN npm install -g pnpm
@@ -22,12 +23,13 @@ COPY . .
 RUN pnpm build
 
 # Stage 3: Runtime
-FROM alpine:3.20 AS runtime
+FROM alpine:3.21 AS runtime
 RUN apk add --no-cache \
     nodejs \
     python3 \
     yt-dlp \
     ffmpeg \
+    rubberband \
     curl \
     tini
 
@@ -40,7 +42,7 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/static ./static
 COPY --from=build --chown=node:node /app/package.json .
 
-RUN mkdir -p ./static/audio && chown node:node ./static/audio
+RUN mkdir -p ./build/client/audio/transposed && chown -R node:node ./build/client/audio
 
 USER node
 

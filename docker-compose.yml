@@ -7,7 +7,7 @@ services:
     ports:
       - "5173:3000"
     volumes:
-      - audio_data:/app/static/audio
+      - audio_data:/app/build/client/audio
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

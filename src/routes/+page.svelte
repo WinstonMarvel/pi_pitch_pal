@@ -132,7 +132,7 @@
 					<div class="grid gap-6 md:grid-cols-2">
 						{#each audioFiles as audio (audio.filename)}
 							<div class="relative">
-								<AudioPlayer src={audio.url} title={audio.title} />
+								<AudioPlayer src={audio.url} title={audio.title} filename={audio.filename} />
 
 								<!-- Rename Form (shown when editing) -->
 								{#if renamingFile === audio.filename}
