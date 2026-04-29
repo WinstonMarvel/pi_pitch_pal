@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: pi-pitch-pal
     ports:
-      - "5173:3000"
+      - "0.0.0.0:5173:3000"
     volumes:
       - audio_data:/app/build/client/audio
     environment:
