@@ -1,0 +1,31 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pi-pitch-pal
+    ports:
+      - "0.0.0.0:5173:3000"
+    volumes:
+      - audio_data:/app/build/client/audio
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - app-network
+
+volumes:
+  audio_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,13 +1,98 @@
-import { mkdir } from 'fs/promises';
+import { mkdir, unlink, rm, rename as fsRename, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { spawn } from 'child_process';
+import { tmpdir } from 'os';
+import { randomBytes } from 'crypto';
 import path from 'path';
 
-const AUDIO_DIR = 'static/audio';
+const AUDIO_DIR = 'build/client/audio';
+const TRANSPOSED_DIR = 'build/client/audio/transposed';
 
 // Ensure audio directory exists
 export async function ensureAudioDir() {
 	if (!existsSync(AUDIO_DIR)) {
 		await mkdir(AUDIO_DIR, { recursive: true });
+	}
+}
+
+// Internal helper: run a shell command, resolve on exit code 0, reject otherwise
+function runCommand(cmd: string, args: string[]): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const proc = spawn(cmd, args);
+		let errOutput = '';
+		proc.stderr?.on('data', (d: Buffer) => (errOutput += d.toString()));
+		proc.stdout?.on('data', () => {}); // drain stdout
+		proc.on('close', (code) => {
+			if (code === 0) resolve();
+			else reject(new Error(`${cmd} exited with code ${code}: ${errOutput.slice(0, 500)}`));
+		});
+		proc.on('error', reject);
+	});
+}
+
+export interface TransposeResult {
+	success: boolean;
+	url?: string;
+	error?: string;
+}
+
+export async function transposeAudio(filename: string, semitones: number): Promise<TransposeResult> {
+	// Input validation
+	if (!Number.isInteger(semitones) || semitones < -24 || semitones > 24 || semitones === 0) {
+		return { success: false, error: 'semitones must be a non-zero integer between -24 and 24' };
+	}
+	// Strict filename validation to prevent path traversal
+	if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
+		return { success: false, error: 'Invalid filename' };
+	}
+
+	const inputPath = path.join(AUDIO_DIR, filename);
+	if (!existsSync(inputPath)) {
+		return { success: false, error: 'Source file not found' };
+	}
+
+	// Cache path: static/audio/transposed/<basename>/<p2|n3>.mp3
+	const basename = filename.replace(/\.[^.]+$/, '');
+	const semLabel = semitones > 0 ? `p${semitones}` : `n${Math.abs(semitones)}`;
+	const cacheDir = path.join(TRANSPOSED_DIR, basename);
+	const cachedFilename = `${semLabel}.mp3`;
+	const cachedPath = path.join(cacheDir, cachedFilename);
+
+	if (existsSync(cachedPath)) {
+		return { success: true, url: `/audio/transposed/${basename}/${cachedFilename}` };
+	}
+
+	await mkdir(cacheDir, { recursive: true });
+
+	const tempId = randomBytes(8).toString('hex');
+	const tempIn = path.join(tmpdir(), `ppp_${tempId}_in.wav`);
+	const tempOut = path.join(tmpdir(), `ppp_${tempId}_out.wav`);
+
+	try {
+		// 1. Decode MP3 → WAV (44.1 kHz stereo)
+		await runCommand('ffmpeg', ['-y', '-i', inputPath, '-ar', '44100', '-ac', '2', tempIn]);
+
+		// 2. Pitch-shift with rubberband (--formant preserves vocal character)
+		await runCommand('rubberband', [
+			'--pitch', semitones.toString(),
+			'--formant',
+			tempIn,
+			tempOut
+		]);
+
+		// 3. Encode WAV → MP3
+		await runCommand('ffmpeg', ['-y', '-i', tempOut, '-b:a', '192k', cachedPath]);
+
+		return { success: true, url: `/audio/transposed/${basename}/${cachedFilename}` };
+	} catch (err) {
+		// Remove any partial output so a retry works cleanly
+		if (existsSync(cachedPath)) {
+			await unlink(cachedPath).catch(() => {});
+		}
+		return { success: false, error: err instanceof Error ? err.message : 'Processing failed' };
+	} finally {
+		await unlink(tempIn).catch(() => {});
+		await unlink(tempOut).catch(() => {});
 	}
 }
 
@@ -103,7 +188,6 @@ export interface AudioFile {
 export async function getAudioFiles(): Promise<AudioFile[]> {
 	await ensureAudioDir();
 
-	const { readdir } = await import('fs/promises');
 	const files = await readdir(AUDIO_DIR);
 
 	return files
@@ -116,22 +200,27 @@ export async function getAudioFiles(): Promise<AudioFile[]> {
 }
 
 export async function deleteAudioFile(filename: string): Promise<boolean> {
-	const { unlink } = await import('fs/promises');
 	const filepath = path.join(AUDIO_DIR, filename);
 
 	try {
-		if (existsSync(filepath)) {
-			await unlink(filepath);
-			return true;
+		if (!existsSync(filepath)) return false;
+
+		await unlink(filepath);
+
+		// Also purge the transposed cache for this file
+		const basename = filename.replace(/\.[^.]+$/, '');
+		const transposedDir = path.join(TRANSPOSED_DIR, basename);
+		if (existsSync(transposedDir)) {
+			await rm(transposedDir, { recursive: true });
 		}
-		return false;
+
+		return true;
 	} catch {
 		return false;
 	}
 }
 
 export async function renameAudioFile(oldFilename: string, newTitle: string): Promise<{ success: boolean; newFilename?: string; error?: string }> {
-	const { rename } = await import('fs/promises');
 	const oldPath = path.join(AUDIO_DIR, oldFilename);
 
 	if (!existsSync(oldPath)) {
@@ -152,7 +241,17 @@ export async function renameAudioFile(oldFilename: string, newTitle: string): Pr
 	const newPath = path.join(AUDIO_DIR, newFilename);
 
 	try {
-		await rename(oldPath, newPath);
+		await fsRename(oldPath, newPath);
+
+		// Move transposed cache to match new basename
+		const oldBasename = oldFilename.replace(/\.[^.]+$/, '');
+		const newBasename = newFilename.replace(/\.[^.]+$/, '');
+		const oldTransposedDir = path.join(TRANSPOSED_DIR, oldBasename);
+		const newTransposedDir = path.join(TRANSPOSED_DIR, newBasename);
+		if (existsSync(oldTransposedDir)) {
+			await fsRename(oldTransposedDir, newTransposedDir);
+		}
+
 		return { success: true, newFilename };
 	} catch (err) {
 		return { success: false, error: err instanceof Error ? err.message : 'Failed to rename' };
