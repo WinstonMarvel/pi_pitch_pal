@@ -16,6 +16,18 @@ A YouTube audio extractor built with SvelteKit. Download YouTube videos, extract
 
 This app requires `yt-dlp` to be installed on your system.
 
+If YouTube shows bot-check/sign-in errors, configure one of these optional environment variables before starting the app:
+
+- `YTDLP_COOKIES_FROM_BROWSER` (example: `chrome`, `firefox`, `safari`)
+- `YTDLP_COOKIES_FILE` (absolute path to exported `cookies.txt`)
+
+Example:
+
+```bash
+export YTDLP_COOKIES_FROM_BROWSER=chrome
+pnpm dev
+```
+
 **macOS:**
 
 ```bash
@@ -83,6 +95,26 @@ The app runs inside a containerized Alpine Linux environment with all dependenci
 - **Port**: Maps to port 5173 on your host (customizable in `docker-compose.yml`)
 - **Audio Storage**: Persisted in `audio_data` named volume (survives container restarts)
 - **Environment**: Production Node.js environment (`NODE_ENV=production`)
+
+### YouTube Bot-Check in Docker
+
+For Docker deployments, pass yt-dlp auth into the container with environment variables:
+
+```bash
+export YTDLP_COOKIES_FILE=/app/config/cookies.txt
+docker compose up -d --build
+```
+
+Then mount a valid exported `cookies.txt` into that path (for example with an override file):
+
+```yaml
+services:
+	app:
+		volumes:
+			- ./cookies.txt:/app/config/cookies.txt:ro
+```
+
+`YTDLP_COOKIES_FROM_BROWSER` is generally not practical inside containers unless browser profiles are also mounted.
 
 ### Local Development with Docker
 

@@ -103,6 +103,46 @@ export interface DownloadResult {
 	error?: string;
 }
 
+function isYouTubeUrl(url: string): boolean {
+	return /(?:youtube\.com|youtu\.be)/i.test(url);
+}
+
+function getYtDlpAuthArgs(): string[] {
+	const args: string[] = [];
+	const cookiesFromBrowser = process.env.YTDLP_COOKIES_FROM_BROWSER?.trim();
+	const cookiesFile = process.env.YTDLP_COOKIES_FILE?.trim();
+
+	if (cookiesFromBrowser) {
+		args.push('--cookies-from-browser', cookiesFromBrowser);
+	}
+
+	if (cookiesFile) {
+		args.push('--cookies', cookiesFile);
+	}
+
+	return args;
+}
+
+function mapDownloadError(stderr: string, url: string): string {
+	if (/Sign in to confirm you're not a bot|Sign in to confirm you\u2019re not a bot/i.test(stderr)) {
+		return [
+			'YouTube is blocking anonymous downloads for this video.',
+			'Set YTDLP_COOKIES_FROM_BROWSER (for example: chrome) or YTDLP_COOKIES_FILE (path to exported cookies.txt), then retry.',
+			'Details: https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies'
+		].join(' ');
+	}
+
+	if (/Signature extraction failed|Some web client https formats have been skipped/i.test(stderr) && isYouTubeUrl(url)) {
+		return [
+			'yt-dlp could not extract playable YouTube formats in this session.',
+			'Try updating yt-dlp and provide cookies via YTDLP_COOKIES_FROM_BROWSER or YTDLP_COOKIES_FILE.',
+			'Details: https://github.com/yt-dlp/yt-dlp/issues/12482'
+		].join(' ');
+	}
+
+	return stderr;
+}
+
 export async function downloadAudio(youtubeUrl: string): Promise<DownloadResult> {
 	await ensureAudioDir();
 
@@ -125,9 +165,18 @@ export async function downloadAudio(youtubeUrl: string): Promise<DownloadResult>
 				'--audio-quality', '256K',
 				'-o', outputTemplate,
 				'--no-playlist',
+				'--retries', '5',
+				'--fragment-retries', '5',
+				'--sleep-requests', '1',
 				'--print', 'after_move:filepath', // Print the final filename
 				'--restrict-filenames' // Safe filenames
 			];
+
+			if (isYouTubeUrl(youtubeUrl)) {
+				args.push('--extractor-args', 'youtube:player_client=android,ios,web');
+			}
+
+			args.push(...getYtDlpAuthArgs());
 
 			console.log('📋 [Download] Running: yt-dlp', args.join(' '));
 
@@ -154,7 +203,8 @@ export async function downloadAudio(youtubeUrl: string): Promise<DownloadResult>
 					const title = filename.replace(/_[^_]+\.mp3$/, '').replace(/_/g, ' ');
 					resolve({ filename, title });
 				} else {
-					reject(new Error(errorOutput || `yt-dlp exited with code ${code}`));
+					const mappedError = mapDownloadError(errorOutput || `yt-dlp exited with code ${code}`, youtubeUrl);
+					reject(new Error(mappedError));
 				}
 			});
 
