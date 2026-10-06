@@ -127,7 +127,7 @@
 	<button
 		onclick={handlePlay}
 		disabled={isTransposing}
-		class="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-purple-600 text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+		class="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		{#if isTransposing}
 			<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24">
@@ -160,9 +160,9 @@
 </td>
 
 <td class="min-w-0 px-3 py-3">
-	<div class="truncate font-medium text-white" {title}>{title}</div>
+	<div class="truncate font-medium text-[var(--text-primary)]" {title}>{title}</div>
 	{#if isTransposing}
-		<div class="text-xs text-purple-300">Transposing…</div>
+		<div class="text-xs text-[var(--text-secondary)]">Transposing…</div>
 	{:else}
 		<input
 			type="range"
@@ -176,7 +176,7 @@
 				progress = newPosition;
 				if (audioEl) audioEl.currentTime = newPosition;
 			}}
-			class="mt-1 h-1 w-full max-w-xs cursor-pointer appearance-none rounded-lg bg-white/20 accent-purple-500"
+			class="mt-1 h-1 w-full max-w-xs cursor-pointer appearance-none rounded-lg bg-white/20 accent-[var(--accent)]"
 		/>
 	{/if}
 	{#if transposeError}
@@ -184,7 +184,7 @@
 	{/if}
 </td>
 
-<td class="px-3 py-3 whitespace-nowrap text-purple-300">
+<td class="px-3 py-3 whitespace-nowrap text-[var(--text-secondary)]">
 	{formatTime(progress)} / {formatTime(duration)}
 </td>
 
@@ -197,9 +197,9 @@
 			step="1"
 			value={pitch}
 			oninput={handlePitchChange}
-			class="h-1.5 w-24 cursor-pointer appearance-none rounded-lg bg-white/20 accent-purple-500"
+			class="h-1.5 w-24 cursor-pointer appearance-none rounded-lg bg-white/20 accent-[var(--accent)]"
 		/>
-		<span class="w-10 flex-shrink-0 text-xs text-purple-300"
+		<span class="w-10 flex-shrink-0 text-xs text-[var(--text-secondary)]"
 			>{pitch === 0 ? 'Orig' : pitch > 0 ? `+${pitch}` : pitch}</span
 		>
 	</div>

@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { ActionData, PageData } from './$types';
 	import AudioPlayerRow from '$lib/components/AudioPlayerRow.svelte';
+	import { getTheme, toggleTheme } from '$lib/theme.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -75,18 +76,25 @@
 	<title>Pi Pitch Pal - Audio Extractor</title>
 </svelte:head>
 
-<main class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+<main class="min-h-screen bg-gradient-to-br from-[var(--grad-from)] via-[var(--grad-via)] to-[var(--grad-to)]">
 	<div class="container mx-auto px-4 py-12">
 		<!-- Header -->
-		<header class="mb-12 text-center">
-			<h1 class="mb-2 text-4xl font-bold text-white">🎵 Pi Pitch Pal</h1>
-			<p class="text-lg text-purple-300">Extract audio from any video</p>
+		<header class="relative mb-12 text-center">
+			<button
+				onclick={toggleTheme}
+				title="Switch theme"
+				class="absolute top-0 right-0 cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+			>
+				{getTheme() === 'vibrant' ? '🎨 Vibrant' : '⚪ Neutral'}
+			</button>
+			<h1 class="mb-2 text-4xl font-bold text-[var(--text-primary)]">🎵 Pi Pitch Pal</h1>
+			<p class="text-lg text-[var(--text-secondary)]">Extract audio from any video</p>
 		</header>
 
 		<!-- Download Form -->
 		<section class="mx-auto mb-12 max-w-2xl">
-			<div class="rounded-2xl bg-white/10 p-8 shadow-2xl backdrop-blur-lg">
-				<h2 class="mb-6 text-xl font-semibold text-white">Download Audio</h2>
+			<div class="rounded-2xl bg-[var(--surface)] p-8 shadow-2xl backdrop-blur-lg">
+				<h2 class="mb-6 text-xl font-semibold text-[var(--text-primary)]">Download Audio</h2>
 
 				<form
 					method="POST"
@@ -102,7 +110,7 @@
 					class="space-y-4"
 				>
 					<div>
-						<label for="url" class="mb-2 block text-sm font-medium text-purple-200">
+						<label for="url" class="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
 							Video URL
 						</label>
 						<input
@@ -113,14 +121,14 @@
 							placeholder="Paste video link here..."
 							required
 							disabled={isLoading}
-							class="w-full rounded-lg border border-purple-500/30 bg-white/5 px-4 py-3 text-white placeholder-purple-300/50 transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 focus:outline-none disabled:opacity-50"
+							class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/50 focus:outline-none disabled:opacity-50"
 						/>
 					</div>
 
 					<button
 						type="submit"
 						disabled={isLoading || !videoUrl}
-						class="w-full cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white transition hover:from-purple-500 hover:to-pink-500 disabled:cursor-not-allowed disabled:opacity-50"
+						class="w-full cursor-pointer rounded-lg bg-[var(--accent)] px-6 py-3 font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if isLoading}
 							<span class="flex items-center justify-center gap-2">
@@ -165,27 +173,27 @@
 
 		<!-- Audio Library -->
 		<section class="mx-auto max-w-6xl">
-			<div class="rounded-2xl bg-white/10 p-8 shadow-2xl backdrop-blur-lg">
+			<div class="rounded-2xl bg-[var(--surface)] p-8 shadow-2xl backdrop-blur-lg">
 				<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-					<h2 class="text-xl font-semibold text-white">🎧 Audio Library</h2>
+					<h2 class="text-xl font-semibold text-[var(--text-primary)]">🎧 Audio Library</h2>
 
 					<!-- Universal volume control — applies to every track -->
 					<div class="flex items-center gap-3">
-						<span class="text-sm font-medium whitespace-nowrap text-purple-200">🔊 Volume</span>
+						<span class="text-sm font-medium whitespace-nowrap text-[var(--text-secondary)]">🔊 Volume</span>
 						<input
 							type="range"
 							min="0"
 							max="100"
 							step="1"
 							bind:value={masterVolume}
-							class="h-1.5 w-32 cursor-pointer appearance-none rounded-lg bg-white/20 accent-purple-500"
+							class="h-1.5 w-32 cursor-pointer appearance-none rounded-lg bg-white/20 accent-[var(--accent)]"
 						/>
-						<span class="w-10 text-sm text-purple-300">{masterVolume}%</span>
+						<span class="w-10 text-sm text-[var(--text-secondary)]">{masterVolume}%</span>
 					</div>
 				</div>
 
 				{#if audioFiles.length === 0}
-					<div class="py-12 text-center text-purple-300/70">
+					<div class="py-12 text-center text-[var(--text-muted)]">
 						<p class="text-lg">No audio files yet</p>
 						<p class="text-sm">Download your first audio above!</p>
 					</div>
@@ -193,12 +201,12 @@
 					<div class="overflow-x-auto">
 						<table class="w-full border-separate border-spacing-y-1 text-sm">
 							<thead>
-								<tr class="text-left text-xs tracking-wide text-purple-300 uppercase">
+								<tr class="text-left text-xs tracking-wide text-[var(--text-secondary)] uppercase">
 									<th class="w-12 px-3 py-2"></th>
 									<th class="px-3 py-2">
 										<button
 											onclick={() => toggleSort('name')}
-											class="cursor-pointer hover:text-white"
+											class="cursor-pointer hover:text-[var(--text-primary)]"
 										>
 											Name {#if sortKey === 'name'}{sortDir === 'asc' ? '↑' : '↓'}{/if}
 										</button>
@@ -208,7 +216,7 @@
 									<th class="px-3 py-2">
 										<button
 											onclick={() => toggleSort('scale')}
-											class="cursor-pointer hover:text-white"
+											class="cursor-pointer hover:text-[var(--text-primary)]"
 										>
 											Scale {#if sortKey === 'scale'}{sortDir === 'asc' ? '↑' : '↓'}{/if}
 										</button>
@@ -218,7 +226,7 @@
 							</thead>
 							<tbody>
 								{#each sortedAudioFiles as audio (audio.filename)}
-									<tr class="rounded-lg bg-white/5 align-top hover:bg-white/10">
+									<tr class="rounded-lg bg-[var(--surface-soft)] align-top hover:bg-[var(--surface)]">
 										<AudioPlayerRow
 											src={audio.url}
 											title={audio.title}
@@ -233,7 +241,7 @@
 												value={scales[audio.filename] ?? ''}
 												oninput={(e) =>
 													updateScale(audio.filename, (e.target as HTMLInputElement).value)}
-												class="w-28 rounded-lg border border-purple-500/30 bg-white/5 px-2 py-1 text-sm text-white placeholder-purple-300/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 focus:outline-none"
+												class="w-28 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/50 focus:outline-none"
 											/>
 										</td>
 
@@ -257,7 +265,7 @@
 														bind:value={newTitle}
 														placeholder="New title"
 														required
-														class="w-32 rounded-lg border border-purple-500/30 bg-white/5 px-2 py-1 text-sm text-white placeholder-purple-300/50 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 focus:outline-none"
+														class="w-32 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/50 focus:outline-none"
 													/>
 													<button
 														type="submit"
@@ -278,7 +286,7 @@
 													<button
 														onclick={() => startRename(audio.filename, audio.title)}
 														title="Rename"
-														class="cursor-pointer rounded-lg p-2 text-purple-300 transition hover:bg-white/10 hover:text-white"
+														class="cursor-pointer rounded-lg p-2 text-[var(--text-secondary)] transition hover:bg-[var(--surface)] hover:text-[var(--text-primary)]"
 													>
 														✏️
 													</button>
@@ -286,7 +294,7 @@
 														href={audio.url}
 														download={audio.filename}
 														title="Download"
-														class="rounded-lg p-2 text-purple-300 transition hover:bg-white/10 hover:text-white"
+														class="rounded-lg p-2 text-[var(--text-secondary)] transition hover:bg-[var(--surface)] hover:text-[var(--text-primary)]"
 													>
 														⬇️
 													</a>
