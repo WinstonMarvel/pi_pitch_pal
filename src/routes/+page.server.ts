@@ -1,10 +1,10 @@
 import type { Actions, PageServerLoad } from './$types';
-import { downloadAudio, getAudioFiles, deleteAudioFile, renameAudioFile } from '$lib/server/audio';
+import { downloadAudio, getAudioFiles, deleteAudioFile, renameAudioFile, getScales } from '$lib/server/audio';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
-	const audioFiles = await getAudioFiles();
-	return { audioFiles };
+	const [audioFiles, scales] = await Promise.all([getAudioFiles(), getScales()]);
+	return { audioFiles, scales };
 };
 
 export const actions: Actions = {

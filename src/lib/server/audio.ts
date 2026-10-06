@@ -1,4 +1,4 @@
-import { mkdir, unlink, rm, rename as fsRename, readdir } from 'fs/promises';
+import { mkdir, unlink, rm, rename as fsRename, readdir, readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { spawn } from 'child_process';
 import { tmpdir } from 'os';
@@ -7,6 +7,36 @@ import path from 'path';
 
 const AUDIO_DIR = 'build/client/audio';
 const TRANSPOSED_DIR = 'build/client/audio/transposed';
+const SCALES_FILE = path.join(AUDIO_DIR, '.scales.json');
+
+// Scale labels are stored as filename -> scale text, in the same persisted volume as the audio
+async function readScales(): Promise<Record<string, string>> {
+	if (!existsSync(SCALES_FILE)) return {};
+	try {
+		return JSON.parse(await readFile(SCALES_FILE, 'utf-8'));
+	} catch {
+		return {};
+	}
+}
+
+async function writeScales(scales: Record<string, string>): Promise<void> {
+	await ensureAudioDir();
+	await writeFile(SCALES_FILE, JSON.stringify(scales, null, 2));
+}
+
+export async function getScales(): Promise<Record<string, string>> {
+	return readScales();
+}
+
+export async function setScale(filename: string, scale: string): Promise<void> {
+	const scales = await readScales();
+	if (scale.trim().length === 0) {
+		delete scales[filename];
+	} else {
+		scales[filename] = scale.trim();
+	}
+	await writeScales(scales);
+}
 
 // Ensure audio directory exists
 export async function ensureAudioDir() {
@@ -264,6 +294,12 @@ export async function deleteAudioFile(filename: string): Promise<boolean> {
 			await rm(transposedDir, { recursive: true });
 		}
 
+		const scales = await readScales();
+		if (filename in scales) {
+			delete scales[filename];
+			await writeScales(scales);
+		}
+
 		return true;
 	} catch {
 		return false;
@@ -300,6 +336,13 @@ export async function renameAudioFile(oldFilename: string, newTitle: string): Pr
 		const newTransposedDir = path.join(TRANSPOSED_DIR, newBasename);
 		if (existsSync(oldTransposedDir)) {
 			await fsRename(oldTransposedDir, newTransposedDir);
+		}
+
+		const scales = await readScales();
+		if (oldFilename in scales) {
+			scales[newFilename] = scales[oldFilename];
+			delete scales[oldFilename];
+			await writeScales(scales);
 		}
 
 		return { success: true, newFilename };
