@@ -3,6 +3,13 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script>
+			// Apply the saved theme before first paint to avoid a flash of the wrong colors
+			try {
+				var t = localStorage.getItem('pi-pitch-pal-theme');
+				document.documentElement.setAttribute('data-theme', t === 'neutral' ? 'neutral' : 'vibrant');
+			} catch (e) {}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
